@@ -18,12 +18,22 @@ goRight (TreeFocus (Node x left right) (TreeZipper crumbs)) = TreeFocus right (T
 goUp (TreeFocus currentBranch (TreeZipper ((value, otherBranch, direction):crumbs) ))
   | direction == Lft =  TreeFocus (Node value currentBranch otherBranch) (TreeZipper crumbs)
   | direction == Rght = TreeFocus (Node value otherBranch currentBranch) (TreeZipper crumbs)
+goTop focus@(TreeFocus tree (TreeZipper crumbs))
+  | length crumbs == 0 = focus
+  | otherwise = goTop $ goUp focus
 
-sampleTree1 = (Node 2 (leaf 1) (leaf 3))
-sampleTree2 = (Node 6 (leaf 5) (leaf 7))
+--only goes down, assume that is called at the root
+append value (TreeFocus Empty zipper) = TreeFocus (leaf value) zipper
+append value focus@(TreeFocus (Node x left right) zipper)
+  | value == x = focus --value already exists
+  | value < x = append value $ goLeft focus
+  | value > x = append value $ goRight focus
+
+sampleTree1 = (Node 2.0 (leaf 1.0) (leaf 3.0))
+sampleTree2 = (Node 6.0 (leaf 5.0) (leaf 7.0))
 sampleContext1 = newFocus sampleTree1
 
-sampleTree3 = (Node 4 sampleTree1 sampleTree2)
+sampleTree3 = (Node 4.0 sampleTree1 sampleTree2)
 sampleContext3 = newFocus sampleTree3
 
 x -: f = f x
