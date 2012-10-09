@@ -6,6 +6,7 @@ data Tree x =
   | Empty
   deriving(Show)
 leaf x = Node x Red Empty Empty
+newTree x = Node x Black Empty Empty
 
 data Direction = Lft | Rght deriving(Eq,Show)
 --TreeZipper 1. other not chosen tree 2. direction of the chosen tree
@@ -14,9 +15,12 @@ newZipper = TreeZipper []
 
 data TreeFocus a = TreeFocus (Tree a) (TreeZipper a) | Null deriving(Show)
 newFocus tree = TreeFocus tree newZipper
+
 updateValue value (TreeFocus (Node _ color left right) zipper) = (TreeFocus (Node value color left right) zipper)
 updateColor color (TreeFocus (Node x _ left right) zipper) = (TreeFocus (Node x color left right) zipper)
 getValue (TreeFocus (Node x color left right) zipper) = x
+isRed (TreeFocus (Node _ color _ _) _) = color == Red
+
 goLeft  (TreeFocus (Node x color left right) (TreeZipper crumbs)) = TreeFocus left  (TreeZipper $ (x, color, right, Lft):crumbs)
 goRight (TreeFocus (Node x color left right) (TreeZipper crumbs)) = TreeFocus right (TreeZipper $ (x, color, left, Rght):crumbs)
 
@@ -26,6 +30,10 @@ goUp (TreeFocus currentBranch (TreeZipper ((value, color, otherBranch, direction
 goTop focus@(TreeFocus tree (TreeZipper crumbs))
   | length crumbs == 0 = focus
   | otherwise = goTop $ goUp focus
+
+isTop focus@(TreeFocus _ (TreeZipper crumbs)) = length crumbs == 0
+uncle focus@(TreeFocus _ (TreeZipper (____:(_, __, ___, Lft):crumbs)))   = focus -: goUp -: goUp -: goRight
+uncle focus@(TreeFocus _ (TreeZipper (____:(_, __, ___, Rght):crumbs)))  = focus -: goUp -: goUp -: goLeft
 
 find value (TreeFocus Empty zipper) = Null
 find value focus@(TreeFocus (Node x color left right) zipper)
@@ -46,11 +54,28 @@ successor focus@(TreeFocus (Node _ __ ___ Empty) ____) =
 successor focus@(TreeFocus (Node _ __ ___ right) ____) = minimum' $ goRight focus
 
 --only goes down, assume that is called at the root
-append value (TreeFocus Empty zipper) = TreeFocus (leaf value) zipper
+append value (TreeFocus Empty zipper) = TreeFocus (leaf value) zipper -: appendFixup
 append value focus@(TreeFocus (Node x color left right) zipper)
   | value == x = focus --value already exists
   | value < x = append value $ goLeft focus
   | value > x = append value $ goRight focus
+
+appendFixup focus@(TreeFocus (Node _ Black _ _) _) = focus
+appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):[]))) = focus
+appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):(_, _, _, pDirection):_)))
+  | parentIsRed focus = focus
+  | uncleIsRed focus = focus -: goUp -: goUp -: updateColor Red -: makeChildrenBlack -: appendFixup
+  | direction == Rght && pDirection == Lft = focus -: goUp -: leftRotate -: goLeft -: appendFixup
+  | direction == Lft && pDirection == Lft = focus -: goUp -: leftRotate -: goLeft -: appendFixup
+  | direction == Rght && pDirection == Rght = focus -: goUp -: rightRotate -: goRight -: appendFixup
+  | direction == Lft && pDirection == Rght = focus -: goUp -: rightRotate -: goRight -: appendFixup
+  where 
+    uncleIsRed focus'@(TreeFocus _ (TreeZipper (_:_:_))) = focus' -: uncle -: isRed
+    uncleIsRed _ = False
+    parentIsRed focus' =  focus' -: goUp -: isRed
+    makeChildrenBlack focus' = focus' -: goLeft -: updateColor Black -: goUp -: goRight -: updateColor Black -: goUp
+
+appendRet value focus = focus -: append value -: goTop
 
 --assumes that value that should be deleted is focused
 delete focus@(TreeFocus (Node x color Empty Empty) zipper) = TreeFocus Empty zipper
