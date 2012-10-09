@@ -102,14 +102,6 @@ fromList (x:xs) =
     startFocus = newTree x -: newFocus 
     appender focus val = appendRet val focus
   in foldl appender startFocus xs
-
-sampleTree1 = (Node 2.0 Red (leaf 1.0) (leaf 3.0))
-sampleTree2 = (Node 6.0 Red (leaf 5.0) (leaf 7.0))
-sampleContext1 = newFocus sampleTree1
-
-sampleTree3 = (Node 4.0 Red sampleTree1 sampleTree2)
-sampleContext3 = newFocus sampleTree3
-
 -- RB Tree operations
 
 leftRotate (TreeFocus (Node x color left (Node rightX rightColor rightLeft rightRight)) zipper) =
@@ -117,6 +109,3 @@ leftRotate (TreeFocus (Node x color left (Node rightX rightColor rightLeft right
 
 rightRotate (TreeFocus (Node x color (Node leftX leftColor leftLeft leftRight) right) zipper) =
   TreeFocus (Node leftX leftColor leftLeft (Node x color leftRight right)) zipper
-
-sampleTree4 = (Node 'x' Red (leaf 'a') (Node 'y' Red (leaf 'b') (leaf 'g')))
-sampleContext4 = newFocus sampleTree4
