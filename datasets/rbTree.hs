@@ -70,3 +70,14 @@ sampleContext1 = newFocus sampleTree1
 
 sampleTree3 = (Node 4.0 Red sampleTree1 sampleTree2)
 sampleContext3 = newFocus sampleTree3
+
+-- RB Tree operations
+
+leftRotate (TreeFocus (Node x color left (Node rightX rightColor rightLeft rightRight)) zipper) =
+  TreeFocus (Node rightX rightColor (Node x color left rightLeft) rightRight) zipper
+
+rightRotate (TreeFocus (Node x color (Node leftX leftColor leftLeft leftRight) right) zipper) =
+  TreeFocus (Node leftX leftColor leftLeft (Node x color leftRight right)) zipper
+
+sampleTree4 = (Node 'x' Red (leaf 'a') (Node 'y' Red (leaf 'b') (leaf 'g')))
+sampleContext4 = newFocus sampleTree4
