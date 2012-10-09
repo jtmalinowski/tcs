@@ -1,3 +1,4 @@
+import Debug.Trace;
 x -: f = f x
 
 data Color = Red | Black deriving(Eq,Show)
@@ -19,6 +20,7 @@ newFocus tree = TreeFocus tree newZipper
 updateValue value (TreeFocus (Node _ color left right) zipper) = (TreeFocus (Node value color left right) zipper)
 updateColor color (TreeFocus (Node x _ left right) zipper) = (TreeFocus (Node x color left right) zipper)
 getValue (TreeFocus (Node x color left right) zipper) = x
+isRed (TreeFocus Empty _) = False
 isRed (TreeFocus (Node _ color _ _) _) = color == Red
 
 goLeft  (TreeFocus (Node x color left right) (TreeZipper crumbs)) = TreeFocus left  (TreeZipper $ (x, color, right, Lft):crumbs)
@@ -60,20 +62,24 @@ append value focus@(TreeFocus (Node x color left right) zipper)
   | value < x = append value $ goLeft focus
   | value > x = append value $ goRight focus
 
-appendFixup focus@(TreeFocus (Node _ Black _ _) _) = focus
-appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):[]))) = focus
-appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):(_, _, _, pDirection):_)))
-  | parentIsRed focus = focus
+appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):(_, _, _, pDirection):_)))  
+  | parentIsBlack focus = focus
   | uncleIsRed focus = focus -: goUp -: goUp -: updateColor Red -: makeChildrenBlack -: appendFixup
-  | direction == Rght && pDirection == Lft = focus -: goUp -: leftRotate -: goLeft -: appendFixup
-  | direction == Lft && pDirection == Lft = focus -: goUp -: leftRotate -: goLeft -: appendFixup
-  | direction == Rght && pDirection == Rght = focus -: goUp -: rightRotate -: goRight -: appendFixup
+  | direction == Rght && pDirection == Rght = focus -: goUp -: goUp -: leftRotate -: updateColor Black -: colorLeftChild Red -: goRight -: appendFixup
   | direction == Lft && pDirection == Rght = focus -: goUp -: rightRotate -: goRight -: appendFixup
+  | direction == Lft && pDirection == Lft = focus -: goUp -: goUp -: rightRotate -: updateColor Black -: colorRightChild Black -: goLeft -: appendFixup
+  | direction == Rght && pDirection == Lft = focus -: goUp -: leftRotate -: goLeft -: appendFixup
   where 
     uncleIsRed focus'@(TreeFocus _ (TreeZipper (_:_:_))) = focus' -: uncle -: isRed
     uncleIsRed _ = False
-    parentIsRed focus' =  focus' -: goUp -: isRed
+    parentIsBlack focus' = not $ focus' -: goUp -: isRed
     makeChildrenBlack focus' = focus' -: goLeft -: updateColor Black -: goUp -: goRight -: updateColor Black -: goUp
+    colorLeftChild color focus' = focus' -: goLeft -: updateColor color -: goUp
+    colorRightChild color focus' = focus' -: goRight -: updateColor color -: goUp
+
+appendFixup focus@(TreeFocus _ (TreeZipper [])) = updateColor Black focus 
+appendFixup focus@(TreeFocus _ (TreeZipper ((_, _, _, direction):[]))) = focus
+appendFixup focus@(TreeFocus (Node _ Black _ _) _) = focus
 
 appendRet value focus = focus -: append value -: goTop
 
@@ -88,6 +94,14 @@ delete focus@(TreeFocus (Node x color left right) zipper) = updateValue (getValu
 
 inorder focus@(TreeFocus Empty zipper) = []
 inorder focus@(TreeFocus (Node x color left right) zipper) = (inorder $ goLeft focus) ++ [x] ++ (inorder $ goRight focus)
+depth (TreeFocus Empty _) = 0
+depth focus = (max (depth $ goLeft focus) (depth $ goRight focus)) + 1
+
+fromList (x:xs) = 
+  let
+    startFocus = newTree x -: newFocus 
+    appender focus val = appendRet val focus
+  in foldl appender startFocus xs
 
 sampleTree1 = (Node 2.0 Red (leaf 1.0) (leaf 3.0))
 sampleTree2 = (Node 6.0 Red (leaf 5.0) (leaf 7.0))
